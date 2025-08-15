@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Audio Stories</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: #fff;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.8;
+        }
+
+        .genre-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 50px;
+        }
+
+        .genre-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .genre-card:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .genre-card h3 {
+            font-size: 1.8rem;
+            margin-bottom: 15px;
+            color: #ff6b6b;
+        }
+
+        .genre-card p {
+            opacity: 0.8;
+            line-height: 1.6;
+        }
+
+        .stories-list {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .story-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 4px solid #4ecdc4;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .story-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .story-item h4 {
+            color: #4ecdc4;
+            margin-bottom: 5px;
+        }
+
+        .story-item .creator {
+            opacity: 0.7;
+            font-size: 0.9rem;
+        }
+
+        .player-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(20px);
+            padding: 20px;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+        }
+
+        .player-container.active {
+            transform: translateY(0);
+        }
+
+        .player-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 200px 1fr 300px;
+            gap: 30px;
+            align-items: center;
+        }
+
+        .radio-visual {
+            width: 150px;
+            height: 150px;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="10" y="20" width="80" height="60" rx="5" fill="%23333" stroke="%23666" stroke-width="2"/><circle cx="30" cy="40" r="8" fill="%23444"/><circle cx="70" cy="40" r="8" fill="%23444"/><rect x="45" y="55" width="20" height="8" rx="2" fill="%23555"/></svg>') center/contain no-repeat;
+            border-radius: 10px;
+            filter: sepia(100%) hue-rotate(30deg);
+        }
+
+        .player-controls {
+            text-align: center;
+        }
+
+        .player-title {
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            color: #4ecdc4;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            margin: 15px 0;
+            cursor: pointer;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b6b, #4ecdc4);
+            border-radius: 3px;
+            width: 0%;
+            transition: width 0.1s ease;
+        }
+
+        .control-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        .control-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .choices-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .choice-btn {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            border: none;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .choice-btn.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .choice-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+        }
+
+        .visualizer {
+            display: flex;
+            align-items: end;
+            justify-content: center;
+            height: 60px;
+            gap: 3px;
+            margin: 15px 0;
+        }
+
+        .visualizer-bar {
+            width: 4px;
+            background: linear-gradient(to top, #ff6b6b, #4ecdc4);
+            border-radius: 2px;
+            transition: height 0.1s ease;
+        }
+
+        @media (max-width: 768px) {
+            .player-content {
+                grid-template-columns: 1fr;
+                gap: 20px;
+                text-align: center;
+            }
+            
+            .radio-visual {
+                margin: 0 auto;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Interactive Audio Stories</h1>
+            <p>Choose your own adventure in immersive audio experiences</p>
+        </div>
+
+        <div class="genre-grid">
+            <div class="genre-card" data-genre="mystery">
+                <h3>🔍 Mystery</h3>
+                <p>Solve crimes, uncover secrets, and navigate deadly conspiracies where every choice matters.</p>
+                <div class="stories-list">
+                    <div class="story-item" data-story="murder-show">
+                        <h4>The Murder Show</h4>
+                        <div class="creator">by Miles Productions</div>
+                    </div>
+                    <div class="story-item" data-story="sherlock-chronicles">
+                        <h4>The Sherlock Chronicles</h4>
+                        <div class="creator">by Classic Tales</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="genre-card" data-genre="horror">
+                <h3>👻 Horror</h3>
+                <p>Face your fears in spine-chilling tales where survival depends on your decisions.</p>
+                <div class="stories-list">
+                    <div class="story-item" data-story="midnight-tales">
+                        <h4>Midnight Tales</h4>
+                        <div class="creator">by Dark Audio</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="genre-card" data-genre="sci-fi">
+                <h3>🚀 Sci-Fi</h3>
+                <p>Explore distant worlds and face impossible choices in futuristic adventures.</p>
+                <div class="stories-list">
+                    <div class="story-item" data-story="space-mysteries">
+                        <h4>Space Mysteries</h4>
+                        <div class="creator">by Cosmic Stories</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="genre-card" data-genre="romance">
+                <h3>💕 Romance</h3>
+                <p>Navigate matters of the heart where your choices shape love stories.</p>
+                <div class="stories-list">
+                    <div class="story-item" data-story="love-letters">
+                        <h4>Love Letters</h4>
+                        <div class="creator">by Heartstring Audio</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="player-container" id="player">
+        <div class="player-content">
+            <div class="radio-visual"></div>
+            
+            <div class="player-controls">
+                <div class="player-title" id="playerTitle">Select a story to begin</div>
+                <div class="progress-bar" id="progressBar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="visualizer" id="visualizer"></div>
+                <div class="control-buttons">
+                    <button class="control-btn" id="playPauseBtn">▶️</button>
+                    <button class="control-btn" id="rewindBtn">⏪</button>
+                    <button class="control-btn" id="forwardBtn">⏩</button>
+                </div>
+            </div>
+            
+            <div class="choices-container" id="choicesContainer">
+                <!-- Choice buttons will be added dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class InteractiveAudioPlayer {
+            constructor() {
+                this.currentAudio = null;
+                this.currentStory = null;
+                this.currentSegment = null;
+                this.storyData = null;
+                this.isPlaying = false;
+                this.visualizerBars = [];
+                this.audioContext = null;
+                this.analyser = null;
+                this.dataArray = null;
+                
+                this.initializeElements();
+                this.setupEventListeners();
+                this.createVisualizer();
+                this.loadSampleData();
+            }
+
+            initializeElements() {
+                this.player = document.getElementById('player');
+                this.playerTitle = document.getElementById('playerTitle');
+                this.progressBar = document.getElementById('progressBar');
+                this.progressFill = document.getElementById('progressFill');
+                this.playPauseBtn = document.getElementById('playPauseBtn');
+                this.choicesContainer = document.getElementById('choicesContainer');
+                this.visualizer = document.getElementById('visualizer');
+            }
+
+            setupEventListeners() {
+                // Genre card clicks
+                document.querySelectorAll('.genre-card').forEach(card => {
+                    card.addEventListener('click', (e) => {
+                        const storiesList = card.querySelector('.stories-list');
+                        const isVisible = storiesList.style.display === 'block';
+                        
+                        // Hide all other stories
+                        document.querySelectorAll('.stories-list').forEach(list => {
+                            list.style.display = 'none';
+                        });
+                        
+                        // Toggle current
+                        storiesList.style.display = isVisible ? 'none' : 'block';
+                    });
+                });
+
+                // Story item clicks
+                document.querySelectorAll('.story-item').forEach(item => {
+                    item.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const storyId = item.dataset.story;
+                        this.loadStory(storyId);
+                    });
+                });
+
+                // Player controls
+                this.playPauseBtn.addEventListener('click', () => this.togglePlayPause());
+                
+                this.progressBar.addEventListener('click', (e) => {
+                    if (this.currentAudio) {
+                        const rect = this.progressBar.getBoundingClientRect();
+                        const percent = (e.clientX - rect.left) / rect.width;
+                        this.currentAudio.currentTime = percent * this.currentAudio.duration;
+                    }
+                });
+            }
+
+            createVisualizer() {
+                for (let i = 0; i < 32; i++) {
+                    const bar = document.createElement('div');
+                    bar.className = 'visualizer-bar';
+                    bar.style.height = '5px';
+                    this.visualizer.appendChild(bar);
+                    this.visualizerBars.push(bar);
+                }
+            }
+
+            loadSampleData() {
+                // Sample story structure - in real app, load from JSON
+                this.sampleStories = {
+                    'murder-show': {
+                        title: 'The Murder Show',
+                        creator: 'Miles Productions',
+                        episodes: {
+                            'episode-1': {
+                                title: 'Death at Blackwood Manor',
+                                segments: {
+                                    '1A_opening': {
+                                        file: 'audio/mystery/murder-show/episode-1/1A_opening.mp3',
+                                        choices: [
+                                            { text: 'Investigate the cellar', next: '1B_cellar' },
+                                            { text: 'Search upstairs', next: '1C_upstairs' }
+                                        ],
+                                        choiceTime: 30 // seconds
+                                    },
+                                    '1B_cellar': {
+                                        file: 'audio/mystery/murder-show/episode-1/1B_cellar.mp3',
+                                        choices: [
+                                            { text: 'Examine the body', next: '2A_body' },
+                                            { text: 'Look for clues', next: '2B_clues' }
+                                        ],
+                                        choiceTime: 25
+                                    }
+                                }
+                            }
+                        }
+                    }
+                };
+            }
+
+            async loadStory(storyId) {
+                this.currentStory = storyId;
+                this.storyData = this.sampleStories[storyId];
+                
+                if (this.storyData) {
+                    this.playerTitle.textContent = this.storyData.title;
+                    this.player.classList.add('active');
+                    
+                    // Load first episode, first segment
+                    const firstEpisode = Object.keys(this.storyData.episodes)[0];
+                    const firstSegment = Object.keys(this.storyData.episodes[firstEpisode].segments)[0];
+                    
+                    await this.loadSegment(firstEpisode, firstSegment);
+                }
+            }
+
+            async loadSegment(episodeId, segmentId) {
+                const segment = this.storyData.episodes[episodeId].segments[segmentId];
+                
+                if (this.currentAudio) {
+                    this.currentAudio.pause();
+                }
+
+                // In a real app, you'd load the actual audio file
+                // For demo, we'll simulate
+                this.currentSegment = segment;
+                this.setupChoiceTimer();
+                
+                console.log(`Loading: ${segment.file}`);
+                // this.currentAudio = new Audio(segment.file);
+                // this.setupAudioEvents();
+            }
+
+            setupChoiceTimer() {
+                if (this.currentSegment.choices) {
+                    setTimeout(() => {
+                        this.showChoices();
+                    }, this.currentSegment.choiceTime * 1000);
+                }
+            }
+
+            showChoices() {
+                this.choicesContainer.innerHTML = '';
+                
+                this.currentSegment.choices.forEach((choice, index) => {
+                    const button = document.createElement('button');
+                    button.className = 'choice-btn';
+                    button.textContent = choice.text;
+                    button.addEventListener('click', () => {
+                        this.makeChoice(choice.next);
+                    });
+                    
+                    this.choicesContainer.appendChild(button);
+                    
+                    setTimeout(() => {
+                        button.classList.add('show');
+                    }, index * 200);
+                });
+            }
+
+            makeChoice(nextSegmentId) {
+                // Hide choices
+                this.choicesContainer.innerHTML = '';
+                
+                // Load next segment
+                const currentEpisode = Object.keys(this.storyData.episodes)[0]; // For demo
+                this.loadSegment(currentEpisode, nextSegmentId);
+            }
+
+            togglePlayPause() {
+                if (this.currentAudio) {
+                    if (this.isPlaying) {
+                        this.currentAudio.pause();
+                        this.playPauseBtn.textContent = '▶️';
+                    } else {
+                        this.currentAudio.play();
+                        this.playPauseBtn.textContent = '⏸️';
+                    }
+                    this.isPlaying = !this.isPlaying;
+                }
+            }
+
+            updateVisualizer() {
+                if (this.analyser && this.dataArray) {
+                    this.analyser.getByteFrequencyData(this.dataArray);
+                    
+                    for (let i = 0; i < this.visualizerBars.length; i++) {
+                        const value = this.dataArray[i * 4] || 0;
+                        const height = Math.max(5, (value / 255) * 60);
+                        this.visualizerBars[i].style.height = height + 'px';
+                    }
+                }
+                
+                if (this.isPlaying) {
+                    requestAnimationFrame(() => this.updateVisualizer());
+                }
+            }
+        }
+
+        // Initialize the player when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new InteractiveAudioPlayer();
+        });
+    </script>
+</body>
+</html>
