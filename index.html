@@ -856,48 +856,81 @@
             loadSegment('1A_opening');
         }
 
-        function loadSegment(segmentId) {
-            const segment = storySegments[segmentId];
-            if (!segment) {
-                console.error('Segment not found:', segmentId);
-                return;
-            }
+		function buildStoryMap() {
+		   const mapContent = document.getElementById('storyMapContent');
+		   mapContent.innerHTML = '';
+		   
+		   Object.keys(storyTree).forEach(nodeId => {
+			   const node = storyTree[nodeId];
+			   const nodeElement = document.createElement('div');
+			   nodeElement.className = 'story-node';
+			   nodeElement.textContent = node.title;
+			   
+			   if (node.level > 0) {
+				   nodeElement.classList.add(`node-indent-${node.level}`);
+			   }
+			   
+			   if (nodeId === currentSegmentId) {
+				   nodeElement.classList.add('current');
+			   } else if (storyProgress.completed.includes(nodeId)) {
+				   nodeElement.classList.add('completed');
+			   } else {
+				   nodeElement.classList.add('locked');
+			   }
+			   
+			   mapContent.appendChild(nodeElement);
+		   });
+		}
 
-            // Stop current audio if playing
-            stopAudio();
-
-            // Clear previous choices
-            document.getElementById('choicesContainer').innerHTML = '';
-            
-            // Update title
-            document.getElementById('episodeTitle').textContent = segment.title;
-            document.getElementById('storyText').textContent = "Loading audio...";
-
-            // Load new audio
-            currentAudio = new Audio(segment.audio);
-            currentAudio.addEventListener('loadedmetadata', () => {
-                document.getElementById('totalTime').textContent = formatTime(currentAudio.duration);
-                document.getElementById('storyText').textContent = "Ready to play. Press play to continue...";
-            });
-
-            currentAudio.addEventListener('timeupdate', () => {
-                updateProgress();
-                checkForChoices(segment);
-            });
-
-            currentAudio.addEventListener('ended', () => {
-                isPlaying = false;
-                document.getElementById('playPauseBtn').textContent = '▶️';
-                if (!segment.choices) {
-                    document.getElementById('storyText').textContent = "End of this path. Choose restart to try again.";
-                }
-            });
-
-            currentAudio.addEventListener('error', (e) => {
-                console.error('Audio loading error:', e);
-                document.getElementById('storyText').textContent = "Error loading audio. Please check the file path.";
-            });
-        }
+		function loadSegment(segmentId) {
+		   const segment = storySegments[segmentId];
+		   if (!segment) {
+			   console.error('Segment not found:', segmentId);
+			   return;
+		   }
+		   // Stop current audio if playing
+		   stopAudio();
+		   // Clear previous choices
+		   document.getElementById('choicesContainer').innerHTML = '';
+		   
+		   // Update title
+		   document.getElementById('episodeTitle').textContent = segment.title;
+		   document.getElementById('storyText').textContent = "Loading audio...";
+		   // Load new audio
+		   currentAudio = new Audio(segment.audio);
+		   currentAudio.addEventListener('loadedmetadata', () => {
+			   document.getElementById('totalTime').textContent = formatTime(currentAudio.duration);
+			   document.getElementById('storyText').textContent = "Ready to play. Press play to continue...";
+		   });
+		   currentAudio.addEventListener('play', () => {
+			   isPlaying = true;
+			   document.getElementById('playPauseBtn').textContent = '⏸️';
+			   document.getElementById('storyText').textContent = "Listen to the story and make your choices when they appear...";
+		   });
+		   currentAudio.addEventListener('pause', () => {
+			   isPlaying = false;
+			   document.getElementById('playPauseBtn').textContent = '▶️';
+			   document.getElementById('storyText').textContent = "Audio paused. Press play to continue...";
+		   });
+		   currentAudio.addEventListener('timeupdate', () => {
+			   updateProgress();
+			   checkForChoices(segment);
+		   });
+		   currentAudio.addEventListener('ended', () => {
+			   isPlaying = false;
+			   document.getElementById('playPauseBtn').textContent = '▶️';
+			   if (!segment.choices) {
+				   document.getElementById('storyText').textContent = "End of this path. Choose restart to try again.";
+			   }
+		   });
+		   currentAudio.addEventListener('error', (e) => {
+			   console.error('Audio loading error:', e);
+			   document.getElementById('storyText').textContent = "Error loading audio. Please check the file path.";
+		   });
+		   // Set current segment and update story map
+		   currentSegmentId = segmentId;
+		   buildStoryMap();
+		}
 
         function updateProgress() {
             if (currentAudio) {
