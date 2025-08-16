@@ -857,29 +857,36 @@
         }
 
 		function buildStoryMap() {
-		   const mapContent = document.getElementById('storyMapContent');
-		   mapContent.innerHTML = '';
-		   
-		   Object.keys(storyTree).forEach(nodeId => {
-			   const node = storyTree[nodeId];
-			   const nodeElement = document.createElement('div');
-			   nodeElement.className = 'story-node';
-			   nodeElement.textContent = node.title;
-			   
-			   if (node.level > 0) {
-				   nodeElement.classList.add(`node-indent-${node.level}`);
-			   }
-			   
-			   if (nodeId === currentSegmentId) {
-				   nodeElement.classList.add('current');
-			   } else if (storyProgress.completed.includes(nodeId)) {
-				   nodeElement.classList.add('completed');
-			   } else {
-				   nodeElement.classList.add('locked');
-			   }
-			   
-			   mapContent.appendChild(nodeElement);
-		   });
+			const mapContent = document.getElementById('storyMapContent');
+			mapContent.innerHTML = '';
+			
+			// Show completed path
+			storyProgress.currentPath.forEach((nodeId, index) => {
+				const node = storyTree[nodeId];
+				const nodeElement = document.createElement('div');
+				nodeElement.className = 'story-node completed';
+				nodeElement.textContent = node.title;
+				
+				if (index > 0) {
+					nodeElement.classList.add(`node-indent-${index}`);
+				}
+				
+				mapContent.appendChild(nodeElement);
+			});
+			
+			// Show current segment
+			if (currentSegmentId && storyTree[currentSegmentId]) {
+				const node = storyTree[currentSegmentId];
+				const nodeElement = document.createElement('div');
+				nodeElement.className = 'story-node current';
+				nodeElement.textContent = node.title;
+				
+				if (storyProgress.currentPath.length > 0) {
+					nodeElement.classList.add(`node-indent-${storyProgress.currentPath.length}`);
+				}
+				
+				mapContent.appendChild(nodeElement);
+			}
 		}
 
 		function loadSegment(segmentId) {
@@ -949,27 +956,44 @@
             }
         }
 
-        function showChoices(choices) {
-            const container = document.getElementById('choicesContainer');
-            container.innerHTML = '';
-            
-            choices.forEach((choice, index) => {
-                const button = document.createElement('button');
-                button.className = 'choice-btn';
-                button.textContent = choice.text;
-                button.onclick = () => makeChoice(choice.next);
-                
-                container.appendChild(button);
-                
-                setTimeout(() => {
-                    button.classList.add('show');
-                }, index * 300);
-            });
-        }
+		function showChoices(choices) {
+			const container = document.getElementById('choicesContainer');
+			container.innerHTML = '';
+			
+			choices.forEach((choice, index) => {
+				const button = document.createElement('button');
+				button.className = 'choice-btn';
+				button.textContent = choice.text;
+				button.onclick = () => makeChoice(choice.next);
+				
+				container.appendChild(button);
+				
+				setTimeout(() => {
+					button.classList.add('show');
+				}, index * 300);
+			});
+			
+			// Show available choices in story map
+			const mapContent = document.getElementById('storyMapContent');
+			choices.forEach(choice => {
+				const node = storyTree[choice.next];
+				if (node) {
+					const nodeElement = document.createElement('div');
+					nodeElement.className = 'story-node available';
+					nodeElement.textContent = node.title;
+					nodeElement.classList.add(`node-indent-${storyProgress.currentPath.length + 1}`);
+					mapContent.appendChild(nodeElement);
+				}
+			});
+		}
 
-        function makeChoice(nextSegmentId) {
-            loadSegment(nextSegmentId);
-        }
+		function makeChoice(nextSegmentId) {
+			// Add current segment to completed path
+			if (currentSegmentId && !storyProgress.currentPath.includes(currentSegmentId)) {
+				storyProgress.currentPath.push(currentSegmentId);
+			}
+			loadSegment(nextSegmentId);
+		}
 
         function togglePlay() {
             if (!currentAudio) return;
