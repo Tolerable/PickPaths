@@ -477,8 +477,7 @@
     <!-- SCREEN 3: Story Episodes -->
     <div class="screen hidden" id="storyScreen">
         <div class="header">
-            <button class="back-btn" onclick="showGenre(currentGenre)">← Back</button>
-            <h1 id="storyTitle">The Murder Show</h1>
+            <button class="back-btn" onclick="backToGenre()">← Back</button>            <h1 id="storyTitle">The Murder Show</h1>
             <p id="storyCreator">by Miles Productions</p>
         </div>
         <div class="content">
@@ -493,7 +492,7 @@
         <video class="background-video" autoplay muted loop>
             <source src="audio/mystery/murder-show/murder-show.mp4" type="video/mp4">
         </video>
-        <button class="back-btn" onclick="goBack()">← Back</button>
+        <button class="back-btn" onclick="backToStory()">← Back</button>
         <div class="player-content">
             <div class="radio-container">
                 <div class="radio-image"></div>
