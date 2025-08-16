@@ -181,6 +181,102 @@
             justify-content: center;
             position: relative;
             z-index: 2;
+            gap: 20px;
+        }
+
+        .story-map-panel {
+            width: 300px;
+            max-height: 80vh;
+            background: rgba(0, 0, 0, 0.9);
+            border: 2px solid #333;
+            border-radius: 15px;
+            padding: 20px;
+            overflow-y: auto;
+            backdrop-filter: blur(20px);
+            transition: transform 0.3s ease;
+        }
+
+        .story-map-panel.collapsed {
+            transform: translateX(320px);
+        }
+
+        .map-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #444;
+        }
+
+        .map-title {
+            color: #4ecdc4;
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        .map-toggle {
+            background: none;
+            border: 1px solid #666;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .map-toggle:hover {
+            border-color: #4ecdc4;
+        }
+
+        .story-node {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+            font-size: 0.9rem;
+        }
+
+        .story-node.current {
+            background: rgba(76, 205, 196, 0.2);
+            border-left-color: #4ecdc4;
+            color: #4ecdc4;
+        }
+
+        .story-node.completed {
+            background: rgba(255, 255, 255, 0.1);
+            border-left-color: #888;
+            color: #ccc;
+        }
+
+        .story-node.available {
+            background: rgba(255, 107, 107, 0.1);
+            border-left-color: #ff6b6b;
+            color: #ff6b6b;
+        }
+
+        .story-node.locked {
+            background: rgba(255, 255, 255, 0.05);
+            border-left-color: #444;
+            color: #666;
+            cursor: not-allowed;
+        }
+
+        .story-node:hover:not(.locked) {
+            transform: translateX(5px);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .node-indent-1 { margin-left: 15px; }
+        .node-indent-2 { margin-left: 30px; }
+
+        .path-connector {
+            margin: 5px 0;
+            padding-left: 10px;
+            color: #666;
+            font-size: 0.8rem;
         }
 
         .radio-container {
@@ -425,6 +521,16 @@
                     </div>
                 </div>
             </div>
+            
+            <div class="story-map-panel" id="storyMapPanel">
+                <div class="map-header">
+                    <div class="map-title">Story Path</div>
+                    <button class="map-toggle" onclick="toggleStoryMap()">Hide</button>
+                </div>
+                <div id="storyMapContent">
+                    <!-- Story map will be built here -->
+                </div>
+            </div>
         </div>
     </div>
 
@@ -434,6 +540,56 @@
         let currentEpisode = '';
         let currentAudio = null;
         let isPlaying = false;
+        let currentSegmentId = '';
+        let storyProgress = {
+            completed: [],
+            currentPath: []
+        };
+
+        // Story structure with tree relationships
+        const storyTree = {
+            "1A_opening": {
+                title: "The Dinner Party Begins",
+                level: 0,
+                children: ["1B_cellar", "1C_upstairs"]
+            },
+            "1B_cellar": {
+                title: "Down in the Cellar", 
+                level: 1,
+                parent: "1A_opening",
+                children: ["2A_confront", "2B_escape"]
+            },
+            "1C_upstairs": {
+                title: "The Upper Floors",
+                level: 1, 
+                parent: "1A_opening",
+                children: ["2C_announcement", "2D_search_room"]
+            },
+            "2A_confront": {
+                title: "The Confrontation",
+                level: 2,
+                parent: "1B_cellar",
+                children: ["3A_finale", "3B_finale"]
+            },
+            "2B_escape": {
+                title: "The Escape Attempt", 
+                level: 2,
+                parent: "1B_cellar",
+                children: ["3C_finale", "3D_finale"]
+            },
+            "2C_announcement": {
+                title: "Richard's Revelation",
+                level: 2,
+                parent: "1C_upstairs", 
+                children: ["3E_finale", "3F_finale"]
+            },
+            "2D_search_room": {
+                title: "The Hidden Evidence",
+                level: 2,
+                parent: "1C_upstairs",
+                children: ["3G_finale", "3H_finale"]
+            }
+        };
 
         // Story structure with actual audio files and choice timings
         const storySegments = {
@@ -654,9 +810,12 @@
             document.getElementById('episodeTitle').textContent = episode.title;
             document.getElementById('storyText').textContent = "Click play to begin your adventure...";
             
+            // Reset story progress
+            storyProgress = { completed: [], currentPath: [] };
+            
             showScreen('storyScreen', 'playerScreen');
             
-            // Load the first segment
+            // Load the first segment and initialize map
             loadSegment('1A_opening');
         }
 
