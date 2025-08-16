@@ -159,6 +159,19 @@
         /* Player Screen Styles */
         .player-screen {
             background: #000;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .background-video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.4;
+            z-index: 1;
         }
 
         .player-content {
@@ -167,6 +180,7 @@
             align-items: center;
             justify-content: center;
             position: relative;
+            z-index: 2;
         }
 
         .radio-container {
@@ -183,19 +197,13 @@
         .radio-image {
             width: 300px;
             height: 300px;
-            background: linear-gradient(45deg, #333, #555);
+            background-image: url('audio/mystery/murder-show/murder-show.jpg');
+            background-size: cover;
+            background-position: center;
             border-radius: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             border: 3px solid #666;
             position: relative;
-        }
-
-        .radio-image::before {
-            content: "📻";
-            font-size: 6rem;
-            filter: sepia(100%) hue-rotate(30deg);
+            box-shadow: 0 0 30px rgba(255, 107, 107, 0.3);
         }
 
         .controls-panel {
@@ -384,6 +392,9 @@
 
     <!-- SCREEN 4: Player -->
     <div class="screen hidden player-screen" id="playerScreen">
+        <video class="background-video" autoplay muted loop>
+            <source src="audio/mystery/murder-show/murder-show.mp4" type="video/mp4">
+        </video>
         <button class="back-btn" onclick="showStory(currentStory)">← Back</button>
         <div class="player-content">
             <div class="radio-container">
@@ -394,12 +405,16 @@
                         Click play to begin your interactive adventure...
                     </div>
                     <div class="progress-container">
-                        <div class="progress-bar">
+                        <div class="progress-bar" id="progressBar">
                             <div class="progress-fill" id="progressFill"></div>
+                        </div>
+                        <div class="time-display">
+                            <span id="currentTime">0:00</span>
+                            <span id="totalTime">0:00</span>
                         </div>
                     </div>
                     <div class="control-buttons">
-                        <button class="control-btn" onclick="togglePlay()">▶️</button>
+                        <button class="control-btn" id="playPauseBtn" onclick="togglePlay()">▶️</button>
                         <button class="control-btn" onclick="rewind()">⏪</button>
                         <button class="control-btn" onclick="restart()">🔄</button>
                     </div>
@@ -415,6 +430,75 @@
         let currentGenre = '';
         let currentStory = '';
         let currentEpisode = '';
+        let currentAudio = null;
+        let isPlaying = false;
+
+        // Story structure with actual audio files and choice timings
+        const storySegments = {
+            "1A_opening": {
+                title: "The Dinner Party Begins",
+                audio: "audio/mystery/murder-show/episode-1/THE MURDER SHOW - EPISODE 01 - 1A_OPENING.mp3",
+                choices: [
+                    { text: "Investigate the mysterious cellar", next: "1B_cellar" },
+                    { text: "Search the upstairs rooms", next: "1C_upstairs" }
+                ],
+                choiceTime: 85 // Show choices at 85% through the audio
+            },
+            "1B_cellar": {
+                title: "Down in the Cellar",
+                audio: "audio/mystery/murder-show/episode-1/THE MURDER SHOW - EPISODE 01 - 1B_CELLAR.mp3",
+                choices: [
+                    { text: "Confront the conspirators", next: "2A_confront" },
+                    { text: "Try to escape undetected", next: "2B_escape" }
+                ],
+                choiceTime: 85
+            },
+            "1C_upstairs": {
+                title: "The Upper Floors", 
+                audio: "audio/mystery/murder-show/episode-1/THE MURDER SHOW - EPISODE 01 - 1C_UPSTAIRS.mp3",
+                choices: [
+                    { text: "Follow them to the announcement", next: "2C_announcement" },
+                    { text: "Search the room for evidence", next: "2D_search_room" }
+                ],
+                choiceTime: 85
+            },
+            "2A_confront": {
+                title: "The Confrontation",
+                audio: "audio/mystery/murder-show/episode-1/THE MURDER SHOW - EPISODE 01 - 2A_CONFRONT.mp3",
+                choices: [
+                    { text: "Warn Richard of the danger", next: "3A_finale" },
+                    { text: "Let events unfold", next: "3B_finale" }
+                ],
+                choiceTime: 85
+            },
+            "2B_escape": {
+                title: "The Escape Attempt",
+                audio: "audio/mystery/murder-show/episode-1/THE MURDER SHOW - EPISODE 01 - 2B_ESCAPE.mp3",
+                choices: [
+                    { text: "Run for help", next: "3C_finale" },
+                    { text: "Protect Victoria", next: "3D_finale" }
+                ],
+                choiceTime: 85
+            },
+            "2C_announcement": {
+                title: "Richard's Revelation",
+                audio: "audio/mystery/murder-show/episode-1/THE MURDER SHOW - EPISODE 01 - 2C_ANNOUNCEMENT.mp3",
+                choices: [
+                    { text: "Search for Richard", next: "3E_finale" },
+                    { text: "Try to escape the manor", next: "3F_finale" }
+                ],
+                choiceTime: 85
+            },
+            "2D_search_room": {
+                title: "The Hidden Evidence",
+                audio: "audio/mystery/murder-show/episode-1/THE MURDER SHOW - EPISODE 01 - 2D_SEARCH_ROOM.mp3",
+                choices: [
+                    { text: "Trust Margaret and help her escape", next: "3G_finale" },
+                    { text: "Face Charles Morrison alone", next: "3H_finale" }
+                ],
+                choiceTime: 85
+            }
+        };
 
         // Sample data structure
         const genreData = {
@@ -566,21 +650,126 @@
             const episode = genreData[currentGenre].stories[currentStory].episodes[episodeId];
             
             document.getElementById('episodeTitle').textContent = episode.title;
-            document.getElementById('storyText').textContent = episode.description;
+            document.getElementById('storyText').textContent = "Click play to begin your adventure...";
             
             showScreen('storyScreen', 'playerScreen');
+            
+            // Load the first segment
+            loadSegment('1A_opening');
+        }
+
+        function loadSegment(segmentId) {
+            const segment = storySegments[segmentId];
+            if (!segment) {
+                console.error('Segment not found:', segmentId);
+                return;
+            }
+
+            // Stop current audio if playing
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio = null;
+            }
+
+            // Clear previous choices
+            document.getElementById('choicesContainer').innerHTML = '';
+            
+            // Update title
+            document.getElementById('episodeTitle').textContent = segment.title;
+            document.getElementById('storyText').textContent = "Loading audio...";
+
+            // Load new audio
+            currentAudio = new Audio(segment.audio);
+            currentAudio.addEventListener('loadedmetadata', () => {
+                document.getElementById('totalTime').textContent = formatTime(currentAudio.duration);
+                document.getElementById('storyText').textContent = "Ready to play. Press play to continue...";
+            });
+
+            currentAudio.addEventListener('timeupdate', () => {
+                updateProgress();
+                checkForChoices(segment);
+            });
+
+            currentAudio.addEventListener('ended', () => {
+                isPlaying = false;
+                document.getElementById('playPauseBtn').textContent = '▶️';
+                if (!segment.choices) {
+                    document.getElementById('storyText').textContent = "End of this path. Choose restart to try again.";
+                }
+            });
+
+            currentAudio.addEventListener('error', (e) => {
+                console.error('Audio loading error:', e);
+                document.getElementById('storyText').textContent = "Error loading audio. Please check the file path.";
+            });
+        }
+
+        function updateProgress() {
+            if (currentAudio) {
+                const percent = (currentAudio.currentTime / currentAudio.duration) * 100;
+                document.getElementById('progressFill').style.width = percent + '%';
+                document.getElementById('currentTime').textContent = formatTime(currentAudio.currentTime);
+            }
+        }
+
+        function checkForChoices(segment) {
+            if (segment.choices && currentAudio) {
+                const percentComplete = (currentAudio.currentTime / currentAudio.duration) * 100;
+                if (percentComplete >= segment.choiceTime && document.getElementById('choicesContainer').children.length === 0) {
+                    showChoices(segment.choices);
+                }
+            }
+        }
+
+        function showChoices(choices) {
+            const container = document.getElementById('choicesContainer');
+            container.innerHTML = '';
+            
+            choices.forEach((choice, index) => {
+                const button = document.createElement('button');
+                button.className = 'choice-btn';
+                button.textContent = choice.text;
+                button.onclick = () => makeChoice(choice.next);
+                
+                container.appendChild(button);
+                
+                setTimeout(() => {
+                    button.classList.add('show');
+                }, index * 300);
+            });
+        }
+
+        function makeChoice(nextSegmentId) {
+            loadSegment(nextSegmentId);
         }
 
         function togglePlay() {
-            console.log('Toggle play/pause');
+            if (!currentAudio) return;
+            
+            if (isPlaying) {
+                currentAudio.pause();
+                document.getElementById('playPauseBtn').textContent = '▶️';
+            } else {
+                currentAudio.play();
+                document.getElementById('playPauseBtn').textContent = '⏸️';
+            }
+            isPlaying = !isPlaying;
         }
 
         function rewind() {
-            console.log('Rewind');
+            if (currentAudio) {
+                currentAudio.currentTime = Math.max(0, currentAudio.currentTime - 10);
+            }
         }
 
         function restart() {
-            console.log('Restart episode');
+            loadSegment('1A_opening');
+        }
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
         }
     </script>
 </body>
