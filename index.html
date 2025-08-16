@@ -33,6 +33,7 @@
         .screen.hidden {
             transform: translateX(-100%);
             opacity: 0;
+            pointer-events: none;
         }
 
         .header {
@@ -67,6 +68,7 @@
             cursor: pointer;
             font-size: 1rem;
             transition: all 0.3s ease;
+            z-index: 1000;
         }
 
         .back-btn:hover {
@@ -463,7 +465,7 @@
     <!-- SCREEN 2: Genre Stories -->
     <div class="screen hidden" id="genreScreen">
         <div class="header">
-            <button class="back-btn" onclick="showHome()">← Back</button>
+            <button class="back-btn" onclick="goToHome()">← Back</button>
             <h1 id="genreTitle">Mystery Stories</h1>
             <p>Choose your story adventure</p>
         </div>
@@ -477,7 +479,8 @@
     <!-- SCREEN 3: Story Episodes -->
     <div class="screen hidden" id="storyScreen">
         <div class="header">
-            <button class="back-btn" onclick="backToGenre()">← Back</button>            <h1 id="storyTitle">The Murder Show</h1>
+            <button class="back-btn" onclick="goToGenre()">← Back</button>            
+            <h1 id="storyTitle">The Murder Show</h1>
             <p id="storyCreator">by Miles Productions</p>
         </div>
         <div class="content">
@@ -492,7 +495,7 @@
         <video class="background-video" autoplay muted loop>
             <source src="audio/mystery/murder-show/murder-show.mp4" type="video/mp4">
         </video>
-        <button class="back-btn" onclick="backToStory()">← Back</button>
+        <button class="back-btn" onclick="goToStory()">← Back</button>
         <div class="player-content">
             <div class="radio-container">
                 <div class="radio-image"></div>
@@ -740,16 +743,52 @@
             }
         };
 
+        // FIXED NAVIGATION FUNCTIONS
         function showScreen(hideId, showId) {
+            // Hide current screen
             document.getElementById(hideId).classList.add('hidden');
+            // Show new screen after transition
             setTimeout(() => {
                 document.getElementById(showId).classList.remove('hidden');
-            }, 250);
+            }, 100);
         }
 
-        function showHome() {
+        function stopAudio() {
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio.currentTime = 0;
+                currentAudio = null;
+                isPlaying = false;
+                document.getElementById('playPauseBtn').textContent = '▶️';
+            }
+        }
+
+        function resetPlayerState() {
+            stopAudio();
+            document.getElementById('choicesContainer').innerHTML = '';
+            document.getElementById('progressFill').style.width = '0%';
+            document.getElementById('currentTime').textContent = '0:00';
+            document.getElementById('totalTime').textContent = '0:00';
+            document.getElementById('storyText').textContent = 'Click play to begin your interactive adventure...';
+        }
+
+        // Navigation functions
+        function goToHome() {
             const currentScreen = document.querySelector('.screen:not(.hidden)').id;
+            resetPlayerState();
             showScreen(currentScreen, 'homeScreen');
+        }
+
+        function goToGenre() {
+            const currentScreen = document.querySelector('.screen:not(.hidden)').id;
+            resetPlayerState();
+            showScreen(currentScreen, 'genreScreen');
+        }
+
+        function goToStory() {
+            const currentScreen = document.querySelector('.screen:not(.hidden)').id;
+            resetPlayerState();
+            showScreen(currentScreen, 'storyScreen');
         }
 
         function showGenre(genre) {
@@ -807,7 +846,6 @@
             const episode = genreData[currentGenre].stories[currentStory].episodes[episodeId];
             
             document.getElementById('episodeTitle').textContent = episode.title;
-            document.getElementById('storyText').textContent = "Click play to begin your adventure...";
             
             // Reset story progress
             storyProgress = { completed: [], currentPath: [] };
@@ -826,10 +864,7 @@
             }
 
             // Stop current audio if playing
-            if (currentAudio) {
-                currentAudio.pause();
-                currentAudio = null;
-            }
+            stopAudio();
 
             // Clear previous choices
             document.getElementById('choicesContainer').innerHTML = '';
@@ -924,6 +959,19 @@
 
         function restart() {
             loadSegment('1A_opening');
+        }
+
+        function toggleStoryMap() {
+            const panel = document.getElementById('storyMapPanel');
+            const button = document.querySelector('.map-toggle');
+            
+            if (panel.classList.contains('collapsed')) {
+                panel.classList.remove('collapsed');
+                button.textContent = 'Hide';
+            } else {
+                panel.classList.add('collapsed');
+                button.textContent = 'Show';
+            }
         }
 
         function formatTime(seconds) {
