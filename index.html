@@ -187,11 +187,13 @@
             display: flex;
             align-items: center;
             gap: 40px;
-            background: rgba(0, 0, 0, 0.9);
+            background: rgba(0, 0, 0, 0.95);
             padding: 40px;
             border-radius: 20px;
             border: 2px solid #333;
             max-width: 90%;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
         }
 
         .radio-image {
@@ -395,7 +397,7 @@
         <video class="background-video" autoplay muted loop>
             <source src="audio/mystery/murder-show/murder-show.mp4" type="video/mp4">
         </video>
-        <button class="back-btn" onclick="showStory(currentStory)">← Back</button>
+        <button class="back-btn" onclick="goBack()">← Back</button>
         <div class="player-content">
             <div class="radio-container">
                 <div class="radio-image"></div>
